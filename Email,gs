@@ -1,0 +1,132 @@
+function enviarCorreoRecordatorio(itemControlColaborador, diasTranscurridos, asuntoCorreo, imagenBanner) {
+  // Obtener datos de control
+  var nombreCompleto = itemControlColaborador[SHEET_CONTROL_COLAB_COLABORADOR_NOMBRE_IDX];
+  var emailColaborador = itemControlColaborador[SHEET_CONTROL_COLAB_COLABORADOR_EMAIL_IDX];
+  var emailManager = itemControlColaborador[SHEET_CONTROL_COLAB_EMAIL_MANAGER_IDX];
+  var nombreColaborador = obtenerNombreDeNombreCompleto(nombreCompleto);
+  var itinerarioID = itemControlColaborador[SHEET_CONTROL_COLAB_ITINERARIO_CODIGO_IDX];
+
+  // Configurar la plantilla
+  var emailPlantilla = HtmlService.createTemplateFromFile("EmailRecordatorio");
+  emailPlantilla.nombre = convertirNombreAPrimeroMayuscula(nombreColaborador);
+  emailPlantilla.urlItinerario = obtenerURLCornerstonePorItinerario(itinerarioID);
+  var htmlPlantilla = emailPlantilla.evaluate().getContent();
+
+  // Configurar datos imagenes
+  var imagenes = {
+    "banner": imagenBanner
+  };
+  if (DIAS_RECORDATORIO_COLAB_1 == diasTranscurridos || EMAIL_CEO_BBVA == emailManager) {
+    emailManager = "";
+  }
+
+  if (!LISTA_EMAILS_MANGER_NO_VALIDOS.includes(emailColaborador)) {
+    enviarCorreoHtmlConImagenCC(emailColaborador, asuntoCorreo, htmlPlantilla, imagenes, emailManager);
+  }
+
+}
+
+function enviarCorreoHtmlConImagenCC(emailDestino, asunto, mensaje, imagenes, copia) {
+  var options = {
+    htmlBody: mensaje,
+    inlineImages: imagenes,
+    cc: copia,
+    bcc: MAIL_COPIA_TM,
+    name: MAIL_SENDER_NAME,
+    from: MAIL_SENDER_EMAIL
+  };
+  // Enviar correo por Gmail API
+  GmailApp.sendEmail(emailDestino, asunto, mensaje, options);
+}
+
+/*
+function enviarCorreoEscalaAdvisors(listaColabRecordatorio3) {
+  // Configurar la plantilla
+  var emailPlantilla = HtmlService.createTemplateFromFile("EmailControlDetalle");
+  if (listaColabRecordatorio3 != null && listaColabRecordatorio3.length > 0) {
+    emailPlantilla.listaPendientes = listaColabRecordatorio3;
+    emailPlantilla.tipoControl = "EscalaAdvisor";
+    var htmlPlantilla = emailPlantilla.evaluate().getContent();
+
+    // Destinatarios de control
+    asuntoCorreo = "ALERTA: Colaboradores con cursos onboarding pendientes luego de 20 dias";
+    emailDestino = LISTA_ADVISORS_RED;
+    enviarCorreoHtml(emailDestino, asuntoCorreo, htmlPlantilla);
+
+  }
+}
+*/
+
+
+function enviarCorreoEscalaAdvisors(listaColabRecordatorio3, tipoProceso) {
+
+  if (tipoProceso == TIPO_PROCESO_ONB) {
+    // Configurar la plantilla
+    console.log(listaColabRecordatorio3);
+    if (listaColabRecordatorio3 != null && listaColabRecordatorio3.length > 0) {
+      var emailPlantilla = HtmlService.createTemplateFromFile("EmailControlDetalle");
+      emailPlantilla.listaPendientes = listaColabRecordatorio3;
+      emailPlantilla.tipoControl = "EscalaAdvisor";
+      var htmlPlantilla = emailPlantilla.evaluate().getContent();
+      // Destinatarios de control
+      asuntoCorreo = "ALERTA: Colaboradores con cursos onboarding pendientes luego de 20 dias";
+      emailDestino = LISTA_ADVISORS_RED;
+      enviarCorreoHtml(emailDestino, asuntoCorreo, htmlPlantilla);
+
+    }
+
+  } else if (tipoProceso == TIPO_PROCESO_REG) {
+    console.log(listaColabRecordatorio3);
+    if (listaColabRecordatorio3 != null && listaColabRecordatorio3.length > 0) {
+      var emailPlantilla = HtmlService.createTemplateFromFile("EmailControlRegularDetalle");
+      emailPlantilla.listaPendientes = listaColabRecordatorio3;
+      emailPlantilla.tipoControl = "EscalaAdvisor";
+      var htmlPlantilla = emailPlantilla.evaluate().getContent();
+      asuntoCorreo = "ALERTA: Colaboradores con cursos mandatorios regulares pendientes";
+      emailDestino = LISTA_ADVISORS_RED;
+      enviarCorreoHtml(emailDestino, asuntoCorreo, htmlPlantilla);
+
+    }
+  }
+}
+/*
+function enviarCorreoEscalaRRLL(listaColabRecordatorio3) {
+  var emailPlantilla = HtmlService.createTemplateFromFile("EmailControlRegularDetalle");
+  emailPlantilla.listaPendientes = listaColabRecordatorio3;
+  emailPlantilla.tipoControl = 'RRLL';
+  var htmlPlantilla = emailPlantilla.evaluate().getContent();
+  asuntoCorreo = "ALERTA: Colaboradores con cursos mandatorios regulares con plazos vencidos";
+  emailDestino = CORREOS_RRLL_REGULAR;
+  enviarCorreoHtml(emailDestino, asuntoCorreo, htmlPlantilla);
+}
+*/
+function enviarCorreoEscalaRRLL(listaColaboradores, tipoProceso) {
+  if (tipoProceso == TIPO_PROCESO_ONB) {
+    var emailPlantilla = HtmlService.createTemplateFromFile("EmailControlDetalle");
+    emailPlantilla.listaPendientes = listaColaboradores;
+    emailPlantilla.tipoControl = 'RRLL';
+    var htmlPlantilla = emailPlantilla.evaluate().getContent();
+    asuntoCorreo = "ALERTA: Colaboradores con cursos mandatorios onboarding con plazos vencidos";
+    enviarCorreoHtml(emailDestino, asuntoCorreo, htmlPlantilla);
+
+  } else if (tipoProceso == TIPO_PROCESO_REG) {
+    var emailPlantilla = HtmlService.createTemplateFromFile("EmailControlRegularDetalle");
+    emailPlantilla.listaPendientes = listaColaboradores;
+    emailPlantilla.tipoControl = 'RRLL';
+    var htmlPlantilla = emailPlantilla.evaluate().getContent();
+    asuntoCorreo = "ALERTA: Colaboradores con cursos mandatorios regulares con plazos vencidos";
+    enviarCorreoHtml(emailDestino, asuntoCorreo, htmlPlantilla);
+
+  }
+}
+
+function enviarCorreoHtml(emailDestino, asunto, mensaje) {
+  var options = {
+    htmlBody: mensaje,
+    bcc: MAIL_COPIA_TM,
+    name: MAIL_SENDER_NAME,
+    from: MAIL_SENDER_EMAIL
+  };
+  // Enviar correo por Gmail API
+  GmailApp.sendEmail(emailDestino, asunto, mensaje, options);
+}
